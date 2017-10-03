@@ -1,8 +1,11 @@
-%bcond_without pgm
+%{?scl:%scl_package zeromq}
+%{!?scl:%global pkg_name %{name}}
 
-Name:           zeromq
+%bcond_with pgm
+
+Name:           %{?scl_prefix}zeromq
 Version:        4.1.6
-Release:        6%{?dist}
+Release:        7%{?dist}
 Summary:        Software library for fast, message-based applications
 
 Group:          System Environment/Libraries
@@ -16,7 +19,7 @@ Source2:        https://raw.githubusercontent.com/zeromq/cppzmq/master/LICENSE
 BuildRequires:  autoconf
 BuildRequires:  automake
 BuildRequires:  libtool
-BuildRequires:  libsodium-devel
+BuildRequires:  %{?scl_prefix}libsodium-devel
 
 BuildRequires:  glib2-devel
 %if ! (0%{?fedora} > 12 || 0%{?rhel} > 5)
@@ -29,6 +32,9 @@ BuildRequires:  libuuid-devel
 BuildRequires:  openpgm-devel
 BuildRequires:  krb5-devel
 %endif
+
+%{?scl:Requires: %scl_runtime}
+%{?scl:BuildRequires: %scl-scldevel}
 
 %description
 The 0MQ lightweight messaging kernel is a library which extends the
@@ -52,20 +58,20 @@ The %{name}-devel package contains libraries and header files for
 developing applications that use %{name}.
 
 
-%package -n cppzmq-devel
+%package -n %{?scl_prefix}cppzmq-devel
 Summary:        Development files for cppzmq
 Group:          Development/Libraries
 License:        MIT
 Requires:       %{name}-devel%{?_isa} = %{version}-%{release}
 
 
-%description -n cppzmq-devel
+%description -n %{?scl_prefix}cppzmq-devel
 The cppzmq-devel package contains libraries and header files for
 developing applications that use the C++ header files of %{name}.
 
 
 %prep
-%setup -q
+%setup -q -n zeromq-%{version}
 cp -a %{SOURCE2} .
 
 # zeromq.x86_64: W: file-not-utf8 /usr/share/doc/zeromq/ChangeLog
@@ -82,6 +88,7 @@ sed -i "s/openpgm-[0-9].[0-9]/%{openpgm_pc}/g" \
 
 
 %build
+%{?scl:scl enable %{scl} - << "EOF"}
 autoreconf -fi
 # Don't turn warnings into errors
 sed -i "s/libzmq_werror=\"yes\"/libzmq_werror=\"no\"/g" \
@@ -93,19 +100,24 @@ sed -i "s/libzmq_werror=\"yes\"/libzmq_werror=\"no\"/g" \
 %endif
             --disable-static
 make %{?_smp_mflags} V=1
+%{?scl:EOF}
 
 
 %install
+%{?scl:scl enable %{scl} - << "EOF"}
 rm -rf %{buildroot}
 make install DESTDIR=%{buildroot} INSTALL="install -p"
 install -m 644 -p %{SOURCE1} %{buildroot}%{_includedir}/
 
 # remove *.la
 rm %{buildroot}%{_libdir}/libzmq.la
+%{?scl:EOF}
 
 
 %check
+%{?scl:scl enable %{scl} - << "EOF"}
 make check V=1
+%{?scl:EOF}
 
 
 %post -p /sbin/ldconfig
@@ -125,12 +137,15 @@ make check V=1
 %{_libdir}/pkgconfig/libzmq.pc
 %{_includedir}/zmq*.h
 
-%files -n cppzmq-devel
+%files -n %{?scl_prefix}cppzmq-devel
 %license LICENSE
 %{_includedir}/zmq.hpp
 
 
 %changelog
+* Tue Oct 03 2017 Augusto Mecking Caringi <acaringi@redhat.com> - 4.1.6-7
+- scl conversion
+
 * Mon Oct 02 2017 Remi Collet <remi@fedoraproject.org> - 4.1.6-6
 - rebuild for libsodium
 
